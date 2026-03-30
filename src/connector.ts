@@ -23,7 +23,7 @@ const SUBFOLDER_MAP: Record<string, TestSuiteSubfolder> = {
 };
 
 const TRUSTY_CODE_RE = /RA[A-Za-z0-9_-]{40,}/;
-const NANOPUB_URI_RE = /https?:\/\/[^\s<>"]+\/np\/R[A-Za-z0-9_-]{40,}/;
+const PREFIX_THIS_RE = /^@prefix\s+this:\s*<([^>]+)>/m;
 
 /**
  * Programmatic accessor for the Nanopublication Test Suite.
@@ -90,7 +90,7 @@ export class NanopubTestSuite {
     this._byArtifactCode = new Map();
     this._byNanopubUri = new Map();
     for (const entry of [...validEntries, ...invalidEntries]) {
-      const code = artifactCodeFromName(entry.name);
+      const code = artifactCodeFromFile(entry.path);
       if (code) this._byArtifactCode.set(code, entry);
       const uri = nanopubUriFromFile(entry.path);
       if (uri) this._byNanopubUri.set(uri, entry);
@@ -433,24 +433,27 @@ function indexTransforms(transformDir: string): {
 // Nanopub URI / artifact code extraction                              //
 // ------------------------------------------------------------------ //
 
-/** Try to extract a Trusty URI artifact code from a filename. */
-function artifactCodeFromName(filename: string): string | undefined {
-  const m = TRUSTY_CODE_RE.exec(filename);
-  return m ? m[0] : undefined;
+/** Read a .trig file and extract the artifact code from the `@prefix this:` URI. */
+function artifactCodeFromFile(filePath: string): string | undefined {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const m = PREFIX_THIS_RE.exec(content);
+    if (!m) return undefined;
+    const code = TRUSTY_CODE_RE.exec(m[1]);
+    return code ? code[0] : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
-/** Scan the first 50 lines of a file for a nanopub URI. */
+/** Read a .trig file and extract the nanopub URI from the `@prefix this:` declaration. */
 function nanopubUriFromFile(filePath: string): string | undefined {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    const lines = content.split('\n');
-    const limit = Math.min(lines.length, 50);
-    for (let i = 0; i < limit; i++) {
-      const m = NANOPUB_URI_RE.exec(lines[i]);
-      if (m) return m[0].replace(/>.*$/, '');
-    }
+    const m = PREFIX_THIS_RE.exec(content);
+    if (!m) return undefined;
+    return m[1].replace(/[/#]$/, '');
   } catch {
-    // ignore unreadable files
+    return undefined;
   }
-  return undefined;
 }
