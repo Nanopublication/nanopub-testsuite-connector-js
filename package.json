@@ -1,0 +1,39 @@
+{
+  "name": "@nanopub/testsuite-connector",
+  "version": "1.0.0",
+  "description": "Programmatic access to the Nanopublication Test Suite for JavaScript/TypeScript",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "nanopublication",
+    "nanopub",
+    "test-suite",
+    "linked-data",
+    "rdf"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nanopublication/nanopub-testsuite-connector-js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}
