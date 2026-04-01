@@ -23,7 +23,8 @@ const SUBFOLDER_MAP: Record<string, TestSuiteSubfolder> = {
 };
 
 const TRUSTY_CODE_RE = /RA[A-Za-z0-9_-]{40,}/;
-const PREFIX_THIS_RE = /^@prefix\s+this:\s*<([^>]+)>/m;
+const PREFIX_RE = /^@prefix\s+(\w*):\s*<([^>]+)>/gm;
+const NP_TYPE_RE = /(<[^>]+>|[\w-]*:[\w-]*)\s+(?:a|rdf:type)\s+(?:<http:\/\/www\.nanopub\.org\/nschema#Nanopublication>|[\w-]+:Nanopublication)/m;
 
 /**
  * Programmatic accessor for the Nanopublication Test Suite.
@@ -433,27 +434,52 @@ function indexTransforms(transformDir: string): {
 // Nanopub URI / artifact code extraction                              //
 // ------------------------------------------------------------------ //
 
-/** Read a .trig file and extract the artifact code from the `@prefix this:` URI. */
-function artifactCodeFromFile(filePath: string): string | undefined {
+/**
+ * Parse a .trig file and return the nanopub URI (the subject of
+ * `S rdf:type np:Nanopublication`) and its artifact code (if trusty).
+ * Resolves prefixed names using the file's own `@prefix` declarations.
+ */
+function nanopubInfoFromFile(filePath: string): { uri: string; code: string | undefined } | undefined {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    const m = PREFIX_THIS_RE.exec(content);
-    if (!m) return undefined;
-    const code = TRUSTY_CODE_RE.exec(m[1]);
-    return code ? code[0] : undefined;
+
+    // Build prefix map
+    const prefixes = new Map<string, string>();
+    PREFIX_RE.lastIndex = 0;
+    let pm: RegExpExecArray | null;
+    while ((pm = PREFIX_RE.exec(content)) !== null) {
+      prefixes.set(pm[1], pm[2]);
+    }
+
+    // Find subject of rdf:type np:Nanopublication
+    const tm = NP_TYPE_RE.exec(content);
+    if (!tm) return undefined;
+
+    const subject = tm[1];
+    let uri: string;
+    if (subject.startsWith('<')) {
+      uri = subject.slice(1, -1);
+    } else {
+      const colonIdx = subject.indexOf(':');
+      const prefix = subject.slice(0, colonIdx);
+      const local = subject.slice(colonIdx + 1);
+      const base = prefixes.get(prefix);
+      if (!base) return undefined;
+      uri = base + local;
+    }
+
+    uri = uri.replace(/[/#]$/, '');
+    const cm = TRUSTY_CODE_RE.exec(uri);
+    return { uri, code: cm ? cm[0] : undefined };
   } catch {
     return undefined;
   }
 }
 
-/** Read a .trig file and extract the nanopub URI from the `@prefix this:` declaration. */
+function artifactCodeFromFile(filePath: string): string | undefined {
+  return nanopubInfoFromFile(filePath)?.code;
+}
+
 function nanopubUriFromFile(filePath: string): string | undefined {
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const m = PREFIX_THIS_RE.exec(content);
-    if (!m) return undefined;
-    return m[1].replace(/[/#]$/, '');
-  } catch {
-    return undefined;
-  }
+  return nanopubInfoFromFile(filePath)?.uri;
 }
