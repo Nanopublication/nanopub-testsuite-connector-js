@@ -23,7 +23,8 @@ const SUBFOLDER_MAP: Record<string, TestSuiteSubfolder> = {
 };
 
 const TRUSTY_CODE_RE = /RA[A-Za-z0-9_-]{40,}/;
-const NANOPUB_URI_RE = /https?:\/\/[^\s<>"]+\/np\/R[A-Za-z0-9_-]{40,}/;
+const PREFIX_RE = /^@prefix\s+(\w*):\s*<([^>]+)>/gm;
+const NP_TYPE_RE = /(<[^>]+>|[\w-]*:[\w-]*)\s+(?:a|rdf:type)\s+(?:<http:\/\/www\.nanopub\.org\/nschema#Nanopublication>|[\w-]+:Nanopublication)/m;
 
 /**
  * Programmatic accessor for the Nanopublication Test Suite.
@@ -90,7 +91,7 @@ export class NanopubTestSuite {
     this._byArtifactCode = new Map();
     this._byNanopubUri = new Map();
     for (const entry of [...validEntries, ...invalidEntries]) {
-      const code = artifactCodeFromName(entry.name);
+      const code = artifactCodeFromFile(entry.path);
       if (code) this._byArtifactCode.set(code, entry);
       const uri = nanopubUriFromFile(entry.path);
       if (uri) this._byNanopubUri.set(uri, entry);
@@ -433,24 +434,52 @@ function indexTransforms(transformDir: string): {
 // Nanopub URI / artifact code extraction                              //
 // ------------------------------------------------------------------ //
 
-/** Try to extract a Trusty URI artifact code from a filename. */
-function artifactCodeFromName(filename: string): string | undefined {
-  const m = TRUSTY_CODE_RE.exec(filename);
-  return m ? m[0] : undefined;
-}
-
-/** Scan the first 50 lines of a file for a nanopub URI. */
-function nanopubUriFromFile(filePath: string): string | undefined {
+/**
+ * Parse a .trig file and return the nanopub URI (the subject of
+ * `S rdf:type np:Nanopublication`) and its artifact code (if trusty).
+ * Resolves prefixed names using the file's own `@prefix` declarations.
+ */
+function nanopubInfoFromFile(filePath: string): { uri: string; code: string | undefined } | undefined {
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    const lines = content.split('\n');
-    const limit = Math.min(lines.length, 50);
-    for (let i = 0; i < limit; i++) {
-      const m = NANOPUB_URI_RE.exec(lines[i]);
-      if (m) return m[0].replace(/>.*$/, '');
+
+    // Build prefix map
+    const prefixes = new Map<string, string>();
+    PREFIX_RE.lastIndex = 0;
+    let pm: RegExpExecArray | null;
+    while ((pm = PREFIX_RE.exec(content)) !== null) {
+      prefixes.set(pm[1], pm[2]);
     }
+
+    // Find subject of rdf:type np:Nanopublication
+    const tm = NP_TYPE_RE.exec(content);
+    if (!tm) return undefined;
+
+    const subject = tm[1];
+    let uri: string;
+    if (subject.startsWith('<')) {
+      uri = subject.slice(1, -1);
+    } else {
+      const colonIdx = subject.indexOf(':');
+      const prefix = subject.slice(0, colonIdx);
+      const local = subject.slice(colonIdx + 1);
+      const base = prefixes.get(prefix);
+      if (!base) return undefined;
+      uri = base + local;
+    }
+
+    uri = uri.replace(/[/#]$/, '');
+    const cm = TRUSTY_CODE_RE.exec(uri);
+    return { uri, code: cm ? cm[0] : undefined };
   } catch {
-    // ignore unreadable files
+    return undefined;
   }
-  return undefined;
+}
+
+function artifactCodeFromFile(filePath: string): string | undefined {
+  return nanopubInfoFromFile(filePath)?.code;
+}
+
+function nanopubUriFromFile(filePath: string): string | undefined {
+  return nanopubInfoFromFile(filePath)?.uri;
 }

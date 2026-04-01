@@ -39,8 +39,9 @@ this:pubinfo { this: <http://purl.org/dc/terms/created> "2024-01-01T00:00:00Z"^^
 
 const SAMPLE_TRUSTY_TRIG = `@prefix this: <https://w3id.org/np/RAexampleArtifactCode1234567890abcdefghijklmn/> .
 @prefix np: <http://www.nanopub.org/nschema#> .
-this: {
-  this: np:hasAssertion this:assertion ;
+this:Head {
+  this: a np:Nanopublication ;
+        np:hasAssertion this:assertion ;
         np:hasProvenance this:provenance ;
         np:hasPublicationInfo this:pubinfo .
 }
