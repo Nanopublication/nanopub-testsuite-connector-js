@@ -189,9 +189,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nanopub/testsuite-connector@workspace:.":
+"@nanopub/nanopub-testsuite-connector-js@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@nanopub/testsuite-connector@workspace:."
+  resolution: "@nanopub/nanopub-testsuite-connector-js@workspace:."
   dependencies:
     "@types/node": "npm:^25.5.0"
     typescript: "npm:^5.0.0"
