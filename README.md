@@ -9,9 +9,9 @@ See also the [Java](https://github.com/Nanopublication/nanopub-testsuite-connect
 ## Installation
 
 ```bash
-npm install @nanopub/testsuite-connector
+npm install @nanopub/nanopub-testsuite-connector-js
 # or
-yarn add @nanopub/testsuite-connector
+yarn add @nanopub/nanopub-testsuite-connector-js
 ```
 
 > **Node.js ≥ 18** required. No external runtime dependencies.

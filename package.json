@@ -1,5 +1,5 @@
 {
-  "name": "@nanopub/testsuite-connector",
+  "name": "@nanopub/nanopub-testsuite-connector-js",
   "version": "1.0.0",
   "description": "Programmatic access to the Nanopublication Test Suite for JavaScript/TypeScript",
   "type": "module",
@@ -26,6 +26,10 @@
     "test-suite",
     "linked-data",
     "rdf"
+  ],
+  "files": [
+    "dist",
+    "src"
   ],
   "license": "MIT",
   "repository": {
